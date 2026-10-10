@@ -31,7 +31,7 @@
 
 #include "strrep.h"
 
-#define DEBUG 1
+#define DEBUG 4
 #define error(fmt, ...) \
   do { if(DEBUG > 0){fprintf(stderr,"CDSP Plugin ERROR: ");\
     fprintf(stderr,((fmt)), ##__VA_ARGS__);} } while (0)
@@ -466,22 +466,22 @@ static int start_camilla(cdsp_t *pcm) {
   char sformat[20];
   switch (pcm->io.format) {
     case SND_PCM_FORMAT_S16_LE:
-      snprintf(sformat, sizeof(sformat), "S16LE");
+      snprintf(sformat, sizeof(sformat), "S16_LE");
       break;
     case SND_PCM_FORMAT_S24_LE:
-      snprintf(sformat, sizeof(sformat), "S24LE");
+      snprintf(sformat, sizeof(sformat), "S24_4_RJ_LE");
       break;
     case SND_PCM_FORMAT_S24_3LE:
-      snprintf(sformat, sizeof(sformat), "S24LE3");
+      snprintf(sformat, sizeof(sformat), "S24_3_LE");
       break;
     case SND_PCM_FORMAT_S32_LE:
-      snprintf(sformat, sizeof(sformat), "S32LE");
+      snprintf(sformat, sizeof(sformat), "S32_LE");
       break;
     case SND_PCM_FORMAT_FLOAT_LE:
-      snprintf(sformat, sizeof(sformat), "FLOAT32LE");
+      snprintf(sformat, sizeof(sformat), "F32_LE");
       break;
     case SND_PCM_FORMAT_FLOAT64_LE:
-      snprintf(sformat, sizeof(sformat), "FLOAT64LE");
+      snprintf(sformat, sizeof(sformat), "F64_LE");
       break;
     default:
       // Shouldn't get here
@@ -892,7 +892,7 @@ static int cdsp_drain(snd_pcm_ioplug_t *io) {
   debug("Draining\n");
   cdsp_t *pcm = io->private_data;
   // Wait for the playback thread to empty the ring buffer
-  while(pcm->io_status >= 0)
+  while(pcm->io_started && pcm->io_status >= 0)
     usleep(10);
   // We cannot recover from an error here. By returning zero we ensure that
   // ioplug stops the pcm. Returning an error code would be interpreted by
@@ -1186,7 +1186,7 @@ SND_PCM_PLUGIN_DEFINE_FUNC(cdsp) {
     const char *id;
     if(snd_config_get_id(n, &id) < 0)
       continue;
-    if(strcmp(id, "comment") == 0 || strcmp(id, "type") == 0)
+    if(strcmp(id, "comment") == 0 || strcmp(id, "type") == 0 || strcmp(id, "hint") == 0)
       continue;
     if(strcmp(id, "cpath") == 0) {
       if((err = snd_config_get_string(n, &temp)) < 0) goto _err;
